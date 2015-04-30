@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="musicg-1.4.2.0 (1)">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/musicg-1.4.2.0 (1).jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/musicg-graphic-1.3.0.0 (1).jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
