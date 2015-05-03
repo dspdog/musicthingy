@@ -2,6 +2,7 @@ package com.meerkos;
 
 import javax.sound.sampled.*;
 import java.nio.ByteBuffer;
+import com.meerkos.utils.*;
 
 /**
  * Created by user on 5/3/2015.
@@ -11,13 +12,12 @@ class SoundThread extends Thread {//originally http://www.wolinlabs.com/blog/jav
     final static public int SAMPLING_RATE = 44100;
     final static public int SAMPLE_SIZE = 2;                 //Sample size in bytes
 
-    final static public double BUFFER_DURATION = 0.0100;      //About a 10ms buffer
+    final static public double BUFFER_DURATION = 0.100;      //About a 10ms buffer
 
     // Size in bytes of sine wave samples we'll create on each loop pass
     final static public int SINE_PACKET_SIZE = (int)(BUFFER_DURATION*SAMPLING_RATE*SAMPLE_SIZE);
 
     final static public int SAMPLES_PER_LOOP = (int)(BUFFER_DURATION*SAMPLING_RATE);
-
 
     SourceDataLine line;
     public double fFreq;                                    //Set from the pitch slider
@@ -28,16 +28,33 @@ class SoundThread extends Thread {//originally http://www.wolinlabs.com/blog/jav
         return line.getBufferSize() - line.available();
     }
 
-
     public double [][] spectralData;
 
     public void setSpectralData(double[][] data){
         spectralData =data;
     }
 
+    public long startTime = System.currentTimeMillis();
+
     public double soundFunction(double time){
-       double angle = time * Math.PI*2f;
-       return  Math.sin(100*angle);
+        double angle = time * Math.PI*2f;
+
+        double t = (System.currentTimeMillis()-startTime)/1000f;
+        double t2 = 16;// + (System.currentTimeMillis()%10000)/10000f*10f;
+
+        double base = 100d+200d*SimplexNoise.noise(t2,t);
+        return sinN(angle, (float)base, 4);
+    }
+
+    public double sinN(double angle, float baseFreq, float reps){
+
+        double res=0;
+
+        for(int i=1; i <reps; i++){
+            res+=Math.sin(i*baseFreq*(angle+Math.random()*2*Math.PI/2000d))/reps;
+        }
+
+        return res;
     }
 
     //Continually fill the audio output buffer whenever it starts to get empty, SINE_PACKET_SIZE/2
