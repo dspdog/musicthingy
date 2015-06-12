@@ -21,15 +21,19 @@ public class SoundThread {
         for(int attempt=0; attempt<10; attempt++){
 
             ArrayList<Integer> arrpeggioNotes = new ArrayList<Integer>();
+            ArrayList<Integer> arrpeggioSustains = new ArrayList<Integer>();
 
             int numNotes = (int)(Math.random()*10f)+3;
             for(int i=0; i<numNotes; i++){
                 arrpeggioNotes.add(new Integer((int) (Math.random() * 12f)));
+                arrpeggioSustains.add(new Integer((int) (100 + Math.random() * 200)));
             }
 
             for(float i=0; i<6; i+=1){
+                int noteIndex=0;
                 for(Integer _int : arrpeggioNotes){
-                    play(line,new Note(_int+i),200);
+                    play(line,new Note(_int+i),arrpeggioSustains.get(noteIndex));
+                    noteIndex++;
                 }
             }
         }
@@ -76,7 +80,7 @@ class Note {
     }
 
     public double periodicFunction(double angle){
-        return Math.sin(angle);
+        return Math.sin(angle) + Math.sin(angle/2)+ Math.sin(angle/4)+ Math.sin(angle/8);
     }
 
     public double noteNum2Hz(double n){
