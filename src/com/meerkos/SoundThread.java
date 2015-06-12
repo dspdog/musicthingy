@@ -1,108 +1,36 @@
 package com.meerkos;
 
-import javax.sound.sampled.*;
-import java.nio.ByteBuffer;
-import com.meerkos.utils.*;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.SourceDataLine;
+import java.util.ArrayList;
 
-/**
- * Created by user on 5/3/2015.
- */
-class SoundThread extends Thread {//originally http://www.wolinlabs.com/blog/java.sine.wave.html
+public class SoundThread {
 
-    final static public int SAMPLING_RATE = 44100;
-    final static public int SAMPLE_SIZE = 2;                 //Sample size in bytes
+    public static void main(String[] args) throws LineUnavailableException {
+        final AudioFormat af =
+            new AudioFormat(Note.SAMPLE_RATE, 8, 1, true, true);
+        SourceDataLine line = AudioSystem.getSourceDataLine(af);
+        line.open(af, Note.SAMPLE_RATE);
+        line.start();
 
-    final static public double BUFFER_DURATION = 0.100;      //About a 10ms buffer
+        //TODO - RANDOM TIMBRES?
 
-    // Size in bytes of sine wave samples we'll create on each loop pass
-    final static public int SINE_PACKET_SIZE = (int)(BUFFER_DURATION*SAMPLING_RATE*SAMPLE_SIZE);
+        //RANDOM ARPEGGIOS
+        for(int attempt=0; attempt<10; attempt++){
 
-    final static public int SAMPLES_PER_LOOP = (int)(BUFFER_DURATION*SAMPLING_RATE);
+            ArrayList<Integer> arrpeggioNotes = new ArrayList<Integer>();
 
-    SourceDataLine line;
-    public double fFreq;                                    //Set from the pitch slider
-    public boolean running = true;
-
-    //Get the number of queued samples in the SourceDataLine buffer
-    private int getLineSampleCount() {
-        return line.getBufferSize() - line.available();
-    }
-
-    public double [][] spectralData;
-
-    public void setSpectralData(double[][] data){
-        spectralData =data;
-    }
-
-    public long startTime = System.currentTimeMillis();
-
-    public double soundFunction(double time){
-        double angle = time * Math.PI*2f;
-
-        double t = (System.currentTimeMillis()-startTime)/1000f;
-        double t2 = 16;// + (System.currentTimeMillis()%10000)/10000f*10f;
-
-        double base = 100d+200d*SimplexNoise.noise(t2,t);
-        return sinN(angle, (float)base, 4);
-    }
-
-    public double sinN(double angle, float baseFreq, float reps){
-
-        double res=0;
-
-        for(int i=1; i <reps; i++){
-            res+=Math.sin(i*baseFreq*(angle+Math.random()*2*Math.PI/2000d))/reps;
-        }
-
-        return res;
-    }
-
-    //Continually fill the audio output buffer whenever it starts to get empty, SINE_PACKET_SIZE/2
-    //samples at a time, until we tell the thread to exit
-    public void run() {
-
-
-        //Open up the audio output, using a sampling rate of 44100hz, 16 bit samples, mono, and big
-        // endian byte ordering.   Ask for a buffer size of at least 2*SINE_PACKET_SIZE
-        try {
-            AudioFormat format = new AudioFormat(44100, 16, 1, true, true);
-            DataLine.Info info = new DataLine.Info(SourceDataLine.class, format, SINE_PACKET_SIZE*2);
-
-            if (!AudioSystem.isLineSupported(info))
-                throw new LineUnavailableException();
-
-            line = (SourceDataLine)AudioSystem.getLine(info);
-            line.open(format);
-            line.start();
-        }
-        catch (LineUnavailableException e) {
-            System.out.println("Line of that type is not available");
-            e.printStackTrace();
-            System.exit(-1);
-        }
-
-        System.out.println("Requested line buffer size = " + SINE_PACKET_SIZE*2);
-        System.out.println("Actual line buffer size = " + line.getBufferSize());
-
-
-        ByteBuffer cBuf = ByteBuffer.allocate(SINE_PACKET_SIZE);
-
-        while (running) {
-
-            cBuf.clear();                             //Toss out samples from previous pass
-            float time=0;
-            for (int i=0; i < SAMPLES_PER_LOOP; i++) {
-                cBuf.putShort((short)(Short.MAX_VALUE * soundFunction(time)));
-                time += 1.0/SAMPLING_RATE;
+            int numNotes = (int)(Math.random()*10f)+3;
+            for(int i=0; i<numNotes; i++){
+                arrpeggioNotes.add(new Integer((int) (Math.random() * 12f)));
             }
 
-            line.write(cBuf.array(), 0, cBuf.position());
-
-            try {
-                while (getLineSampleCount() > SINE_PACKET_SIZE)
-                    Thread.sleep(1);
-            }
-            catch (InterruptedException e) {
+            for(float i=0; i<6; i+=1){
+                for(Integer _int : arrpeggioNotes){
+                    play(line,new Note(_int+i),200);
+                }
             }
         }
 
@@ -110,33 +38,49 @@ class SoundThread extends Thread {//originally http://www.wolinlabs.com/blog/jav
         line.close();
     }
 
-/*
-    public enum Note {//http://stackoverflow.com/questions/2064066/does-java-have-built-in-libraries-for-audio-synthesis/2065693#2065693
+    private static void play(SourceDataLine line, Note note, int ms) {
+        ms = Math.min(ms, Note.SECONDS * 1000);
+        int length = Note.SAMPLE_RATE * ms / 1000;
+        int count = line.write(note.getData(), 0, length);
+    }
+}
 
-        REST, A4, A4$, B4, C4, C4$, D4, D4$, E4, F4, F4$, G4, G4$, A5;
-        public static final int SAMPLE_RATE = 32 * 1024; // ~16KHz
-        public static final int SECONDS = 2;
-        private byte[] sin = new byte[SECONDS * SAMPLE_RATE];
+class Note {
 
-        Note() {
-            int n = this.ordinal();
-            if (n > 0) {
-                double exp = ((double) n - 1) / 12d;
-                double f = 440d * Math.pow(2d, exp);
-                double period = (double)SAMPLE_RATE / f;
-                for (int i = 0; i < sin.length; i++) {
-                    sin[i] = (byte)(harmonicSin(2.0 * Math.PI * i / period, 2, -2)/8f * 127f);
-                }
-            }
+    public static final int SAMPLE_RATE = 16 * 1024 * 4; // ~16KHz * 4
+    public static final int SECONDS = 1;
+    public byte[] data = new byte[SECONDS * SAMPLE_RATE];
+    public double[] dataD = new double[SECONDS * SAMPLE_RATE];
+
+    Note(double n) {
+        initAsFuncWNoteNumber(n);
+    }
+
+    public void initAsFuncWNoteNumber(double noteNumber){ //@ integers REST, A4, A4$, B4, C4, C4$, D4, D4$, E4, F4, F4$, G4, G4$, A5;
+        if (noteNumber > 0) initAsFuncWFreq(noteNum2Hz(noteNumber));
+    }
+
+    public void initAsFuncWFreq(double freq){
+        for (int i = 0; i < data.length; i++) {
+            double period = (double)SAMPLE_RATE / freq;
+            double angle = 2.0 * Math.PI * i / period;
+            dataD[i] = periodicFunction(angle);
         }
+    }
 
-        public double harmonicSin(double s, int start, int end){
+    public byte[] getData(){
+        double dataMax = 0;
+        for (int i = 0; i < data.length; i++)dataMax = Math.max(dataD[i],dataMax);
+        for (int i = 0; i < data.length; i++)data[i] = (byte)(dataD[i]/dataMax * 127f);
+        return data;
+    }
 
-            return  Math.sin(s) ; //+ Math.sin(s/2) + Math.sin(s/4);
-        }
+    public double periodicFunction(double angle){
+        return Math.sin(angle);
+    }
 
-        public byte[] data() {
-            return sin;
-        }
-    }*/
+    public double noteNum2Hz(double n){
+        double exp = ((double) n - 1) / 12d;
+        return 440d * Math.pow(2d, exp);
+    }
 }

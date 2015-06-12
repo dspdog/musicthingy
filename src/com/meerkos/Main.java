@@ -19,8 +19,8 @@ public class Main {
         render.renderSpectrogramData(spec1Data,outFolder+ "/sine.jpg");
 
         SoundThread thread = new SoundThread();
-        thread.setSpectralData(spec1Data);
-        thread.start();
+       // thread.setSpectralData(spec1Data);
+       // thread.start();
     }
 }
 
