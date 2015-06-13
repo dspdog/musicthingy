@@ -18,7 +18,7 @@ public class SoundThread {
         //TODO - RANDOM TIMBRES?
 
         //RANDOM ARPEGGIOS
-        for(int attempt=0; attempt<10; attempt++){
+        for(int attempt=0; attempt<100; attempt++){
 
             ArrayList<Integer> arrpeggioNotes = new ArrayList<Integer>();
             ArrayList<Integer> arrpeggioSustains = new ArrayList<Integer>();
@@ -29,11 +29,32 @@ public class SoundThread {
                 arrpeggioSustains.add(new Integer((int) (100 + Math.random() * 200)));
             }
 
-            for(float i=0; i<6; i+=1){
+            SoundFunction p = new SoundFunction();
+            System.out.println("generating sound...");
+            ArrayList<Note> notes = new ArrayList<Note>();
+            for(float i=0; i<2; i+=1){
+
                 int noteIndex=0;
                 for(Integer _int : arrpeggioNotes){
-                    play(line,new Note(_int+i),arrpeggioSustains.get(noteIndex));
+
+                    p = new SoundFunction();
+
+                    notes.add(new Note(_int + i, p)); // play(line, , arrpeggioSustains.get(noteIndex));
                     noteIndex++;
+                    System.out.println("note " + notes.size());
+                }
+            }
+
+            System.out.println("playing...");
+
+            int noteIndexGlobal=0;
+            for(float i=0; i<2; i+=1){
+                p = new SoundFunction();
+                int noteIndex=0;
+                for(Integer _int : arrpeggioNotes){
+                    play(line,notes.get(noteIndexGlobal),arrpeggioSustains.get(noteIndex));
+                    noteIndex++;
+                    noteIndexGlobal++;
                 }
             }
         }
@@ -43,7 +64,7 @@ public class SoundThread {
     }
 
     private static void play(SourceDataLine line, Note note, int ms) {
-        ms = Math.min(ms, Note.SECONDS * 1000);
+        ms = Math.min(ms, Note.MILLISECONDS);
         int length = Note.SAMPLE_RATE * ms / 1000;
         int count = line.write(note.getData(), 0, length);
     }
@@ -51,12 +72,14 @@ public class SoundThread {
 
 class Note {
 
-    public static final int SAMPLE_RATE = 16 * 1024 * 4; // ~16KHz * 4
-    public static final int SECONDS = 1;
-    public byte[] data = new byte[SECONDS * SAMPLE_RATE];
-    public double[] dataD = new double[SECONDS * SAMPLE_RATE];
+    public static final int SAMPLE_RATE = 16 * 1024; // ~16KHz
+    public static final int MILLISECONDS = 1000;
+    public byte[] data = new byte[MILLISECONDS * SAMPLE_RATE / 1000];
+    public double[] dataD = new double[MILLISECONDS * SAMPLE_RATE / 1000];
+    public SoundFunction myPeriodic;
 
-    Note(double n) {
+    Note(double n, SoundFunction p) {
+        myPeriodic=p;
         initAsFuncWNoteNumber(n);
     }
 
@@ -65,10 +88,10 @@ class Note {
     }
 
     public void initAsFuncWFreq(double freq){
+        double time = 0f;
         for (int i = 0; i < data.length; i++) {
-            double period = (double)SAMPLE_RATE / freq;
-            double angle = 2.0 * Math.PI * i / period;
-            dataD[i] = periodicFunction(angle);
+            time+=1f/(SAMPLE_RATE);
+            dataD[i] = myPeriodic.myFunction(time, freq);
         }
     }
 
@@ -79,12 +102,29 @@ class Note {
         return data;
     }
 
-    public double periodicFunction(double angle){
-        return Math.sin(angle) + Math.sin(angle/2)+ Math.sin(angle/4)+ Math.sin(angle/8);
-    }
-
     public double noteNum2Hz(double n){
         double exp = ((double) n - 1) / 12d;
         return 440d * Math.pow(2d, exp);
+    }
+}
+
+class SoundFunction { //TODO MEMOIZE
+    final int NUM_BUCKETS= 1;
+    final double[] amplitudes = new double[NUM_BUCKETS];
+    final double[] phases = new double[NUM_BUCKETS];
+
+    public SoundFunction(){
+        for(float i=0; i< phases.length; i++){
+            amplitudes[(int)i] = Math.random();
+            phases[(int)i] = Math.random()*2*Math.PI;
+        }
+    }
+
+    public double myFunction(double time, double freq){
+        double period = 1f / freq;
+        double angle = 2.0 * Math.PI * time / period;
+
+        //CREATE RANDOM SET OF RATIONALS...
+        return Math.sin(angle*2) + 2*Math.sin(angle) + 3*Math.sin(angle/2)+ 3*Math.sin(angle/3)+ 9*Math.sin(angle/5) + 1*Math.sin(angle/4)+ 8*Math.sin(angle/8)+ Math.sin(angle/16);
     }
 }
