@@ -25,33 +25,36 @@ public class SoundThread {
             ArrayList<Integer> arrpeggioNotes = new ArrayList<Integer>();
             ArrayList<Integer> arrpeggioSustains = new ArrayList<Integer>();
 
-            int numNotes = 3;
+            int numNotes = 12;
             for(int i=0; i<numNotes; i++){
-                arrpeggioNotes.add(new Integer((int) (Math.random() * 12f)));
+                arrpeggioNotes.add(12);///*new Integer((int) (Math.random() * 12f))*/);
                 arrpeggioSustains.add(1000 /*new Integer((int) (400 + Math.random() * 800))*/);
             }
 
             SoundFunction p = new SoundFunction();
             System.out.println("generating sound...");
             ArrayList<Note> notes = new ArrayList<Note>();
-            for(float i=0; i<2; i+=1){ //arrpegg repeater
+            //for(float i=0; i<2; i+=1){ //arrpegg repeater
 
-                int noteIndex=0;
+               // int noteIndex=0;
+
+
+
                 for(Integer _int : arrpeggioNotes){
 
+
                     p = new SoundFunction();
+                    notes.add(new Note(_int, new SoundFunction())); // play(line, , arrpeggioSustains.get(noteIndex));
 
-                    notes.add(new Note(_int + i, p)); // play(line, , arrpeggioSustains.get(noteIndex));
-
-                    noteIndex++;
+                    //noteIndex++;
                     System.out.println("note " + notes.size());
                 }
-            }
+            //}
 
             System.out.println("playing...");
 
             int noteIndexGlobal=0;
-            for(float i=0; i<2; i+=1){
+            //for(float i=0; i<2; i+=1){
                 p = new SoundFunction();
                 int noteIndex=0;
                 for(Integer _int : arrpeggioNotes){
@@ -59,7 +62,7 @@ public class SoundThread {
                     noteIndex++;
                     noteIndexGlobal++;
                 }
-            }
+            //}
         }
 
         line.drain();
@@ -113,36 +116,50 @@ class Note {
 }
 
 class SoundFunction { //TODO MEMOIZE
-    final int NUM_BUCKETS= 64;
+    final int NUM_BUCKETS= 512;
     final double[] amplitudes = new double[NUM_BUCKETS];
     final double[] phases = new double[NUM_BUCKETS];
 
     public SoundFunction(){
 
-        double scale1 = 64 * (Math.random()-0.5);
-        double scale2 = 64 * (Math.random()-0.5);
+        double scale1 = 64 * (Math.random());
+        double scale2 = 64 * (Math.random());
 
-        double scale3 = 64 * (Math.random()-0.5);
-        double scale4 = 64 * (Math.random()-0.5);
+        double scale3 = 64 * (Math.random());
+        double scale4 = 64 * (Math.random());
 
-        for(float i=0; i< phases.length; i++){
-            amplitudes[(int)i] =(Math.random()-0.5);//SimplexNoise.noise(scale1 * i / phases.length, scale2 * i / phases.length);
-            phases[(int)i] = (Math.random()-0.5)*2*Math.PI;
-            //phases[(int)i] = SimplexNoise.noise(scale3*i/phases.length, scale4*i/phases.length)*2*Math.PI;//Math.random()*2*Math.PI;
+        double scale1d = 32 * (Math.random());
+        double scale2d = 32 * (Math.random());
+
+        double scale3d = 32 * (Math.random());
+        double scale4d = 32 * (Math.random());
+
+        for(float i=0; i< NUM_BUCKETS; i++){
+
+            float scale = i/NUM_BUCKETS;
+
+            amplitudes[(int)i] = SimplexNoise.noise(scale1 * scale + scale1d, scale2 * scale + scale2d);
+            phases[(int)i] = SimplexNoise.noise(scale3*scale + scale3d, scale4*scale+scale4d)*2*Math.PI;//Math.random()*2*Math.PI;
+            //amplitudes[(int)i] =  (Math.random()-0.5);
+            //phases[(int)i] = (Math.random()-0.5)*2*Math.PI;
         }
     }
 
     //TODO "OCTAVE NOISE" function <--reuse dream machine shader?
     //TODO "VIEW THE WAVEFORM" and amplitudes
 
+    //TODO higher dimensional noise (no more buzzing)...
+
     public double myFunction(double time, double freq){
-        double period = 1f / freq;
-        double angle = 2.0 * Math.PI * time / period;
+        //double period = 1f / freq;
+        //double angleForMainFreq = 2.0 * Math.PI * time / period;
 
         double res = 0;
 
         for(int i=0; i<NUM_BUCKETS; i++){
-            res+=amplitudes[i]*Math.sin((angle) * i / NUM_BUCKETS + phases[i]);
+            double _period = 1f / i;
+            double _angleForThisFreq = 2.0 * Math.PI * time / _period + phases[i];
+            res+=amplitudes[i]*Math.sin(freq*_angleForThisFreq);
         }
 
         //CREATE RANDOM SET OF RATIONALS...
