@@ -1,5 +1,7 @@
 package com.meerkos;
 
+import com.meerkos.utils.SimplexNoise;
+
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
@@ -23,16 +25,16 @@ public class SoundThread {
             ArrayList<Integer> arrpeggioNotes = new ArrayList<Integer>();
             ArrayList<Integer> arrpeggioSustains = new ArrayList<Integer>();
 
-            int numNotes = (int)(Math.random()*10f)+3;
+            int numNotes = 3;
             for(int i=0; i<numNotes; i++){
                 arrpeggioNotes.add(new Integer((int) (Math.random() * 12f)));
-                arrpeggioSustains.add(new Integer((int) (100 + Math.random() * 200)));
+                arrpeggioSustains.add(1000 /*new Integer((int) (400 + Math.random() * 800))*/);
             }
 
             SoundFunction p = new SoundFunction();
             System.out.println("generating sound...");
             ArrayList<Note> notes = new ArrayList<Note>();
-            for(float i=0; i<2; i+=1){
+            for(float i=0; i<2; i+=1){ //arrpegg repeater
 
                 int noteIndex=0;
                 for(Integer _int : arrpeggioNotes){
@@ -40,6 +42,7 @@ public class SoundThread {
                     p = new SoundFunction();
 
                     notes.add(new Note(_int + i, p)); // play(line, , arrpeggioSustains.get(noteIndex));
+
                     noteIndex++;
                     System.out.println("note " + notes.size());
                 }
@@ -97,8 +100,9 @@ class Note {
 
     public byte[] getData(){
         double dataMax = 0;
-        for (int i = 0; i < data.length; i++)dataMax = Math.max(dataD[i],dataMax);
-        for (int i = 0; i < data.length; i++)data[i] = (byte)(dataD[i]/dataMax * 127f);
+        double dataMin = 9999999;
+        for (int i = 0; i < data.length; i++){dataMax = Math.max(dataD[i],dataMax);dataMin = Math.min(dataD[i], dataMin);}
+        for (int i = 0; i < data.length; i++)data[i] = (byte)((dataD[i]-dataMin)/(dataMax-dataMin) * 127f);
         return data;
     }
 
@@ -109,22 +113,39 @@ class Note {
 }
 
 class SoundFunction { //TODO MEMOIZE
-    final int NUM_BUCKETS= 1;
+    final int NUM_BUCKETS= 64;
     final double[] amplitudes = new double[NUM_BUCKETS];
     final double[] phases = new double[NUM_BUCKETS];
 
     public SoundFunction(){
+
+        double scale1 = 64 * (Math.random()-0.5);
+        double scale2 = 64 * (Math.random()-0.5);
+
+        double scale3 = 64 * (Math.random()-0.5);
+        double scale4 = 64 * (Math.random()-0.5);
+
         for(float i=0; i< phases.length; i++){
-            amplitudes[(int)i] = Math.random();
-            phases[(int)i] = Math.random()*2*Math.PI;
+            amplitudes[(int)i] =(Math.random()-0.5);//SimplexNoise.noise(scale1 * i / phases.length, scale2 * i / phases.length);
+            phases[(int)i] = (Math.random()-0.5)*2*Math.PI;
+            //phases[(int)i] = SimplexNoise.noise(scale3*i/phases.length, scale4*i/phases.length)*2*Math.PI;//Math.random()*2*Math.PI;
         }
     }
+
+    //TODO "OCTAVE NOISE" function <--reuse dream machine shader?
+    //TODO "VIEW THE WAVEFORM" and amplitudes
 
     public double myFunction(double time, double freq){
         double period = 1f / freq;
         double angle = 2.0 * Math.PI * time / period;
 
+        double res = 0;
+
+        for(int i=0; i<NUM_BUCKETS; i++){
+            res+=amplitudes[i]*Math.sin((angle) * i / NUM_BUCKETS + phases[i]);
+        }
+
         //CREATE RANDOM SET OF RATIONALS...
-        return Math.sin(angle*2) + 2*Math.sin(angle) + 3*Math.sin(angle/2)+ 3*Math.sin(angle/3)+ 9*Math.sin(angle/5) + 1*Math.sin(angle/4)+ 8*Math.sin(angle/8)+ Math.sin(angle/16);
+        return res; //Math.sin(angle*2) + 2*Math.sin(angle) + 3*Math.sin(angle/2)+ 3*Math.sin(angle/3)+ 9*Math.sin(angle/5) + 1*Math.sin(angle/4)+ 8*Math.sin(angle/8)+ Math.sin(angle/16);
     }
 }
