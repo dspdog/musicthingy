@@ -12,10 +12,14 @@ import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
 
 public class SoundThread extends Panel {
+
+    BufferedImage render;
+    Graphics2D rg;
 
     static final int screenwidth = 512;
     static final int screenheight = 512;
@@ -32,7 +36,7 @@ public class SoundThread extends Panel {
         final SoundThread is = new SoundThread();
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
-                is, new JScrollPane());
+                new JScrollPane(), is);
 
         splitPane.setDividerLocation(256);
 
@@ -42,6 +46,17 @@ public class SoundThread extends Panel {
 
         f.setSize(SoundThread.screenwidth, SoundThread.screenheight + 20); // add 20, seems enough for the Frame title,
         f.show();
+
+        System.setProperty("sun.java2d.opengl","True");
+    }
+
+    public void update(Graphics gr){
+        paint((Graphics2D)gr);
+    }
+
+    public void paint(Graphics2D gr) {
+        rg = (Graphics2D) render.getGraphics();
+        rg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
     }
 
     private static void play(SourceDataLine line, Note note, int ms) {
