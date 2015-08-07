@@ -6,18 +6,57 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
+import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.Collections;
 
-public class SoundThread {
+public class SoundThread extends Panel {
 
-    public static void main(String[] args) throws LineUnavailableException {
+    static final int screenwidth = 512;
+    static final int screenheight = 512;
+
+    public static void main(String[] args) {
+        JFrame f = new JFrame();
+
+        f.addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                System.exit(0);
+            };
+        });
+
+        final SoundThread is = new SoundThread();
+
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
+                is, new JScrollPane());
+
+        splitPane.setDividerLocation(256);
+
+        f.add(splitPane);
+
+        f.pack();
+
+        f.setSize(SoundThread.screenwidth, SoundThread.screenheight + 20); // add 20, seems enough for the Frame title,
+        f.show();
+    }
+
+    private static void play(SourceDataLine line, Note note, int ms) {
+        ms = Math.min(ms, Note.MILLISECONDS);
+        int length = Note.SAMPLE_RATE * ms / 1000;
+        int count = line.write(note.getData(), 0, length);
+    }
+
+    public static void sound() throws LineUnavailableException {
         final AudioFormat af =
-            new AudioFormat(Note.SAMPLE_RATE, 8, 1, true, true);
+                new AudioFormat(Note.SAMPLE_RATE, 8, 1, true, true);
         SourceDataLine line = AudioSystem.getSourceDataLine(af);
+
         line.open(af, Note.SAMPLE_RATE);
         line.start();
-
-        //TODO - RANDOM TIMBRES?
 
         //RANDOM ARPEGGIOS
         for(int attempt=0; attempt<100; attempt++){
@@ -36,45 +75,41 @@ public class SoundThread {
             ArrayList<Note> notes = new ArrayList<Note>();
             //for(float i=0; i<2; i+=1){ //arrpegg repeater
 
-               // int noteIndex=0;
+            // int noteIndex=0;
 
 
 
-                for(Integer _int : arrpeggioNotes){
+            for(Integer _int : arrpeggioNotes){
 
 
-                    p = new SoundFunction();
-                    notes.add(new Note(_int, new SoundFunction())); // play(line, , arrpeggioSustains.get(noteIndex));
+                p = new SoundFunction();
+                notes.add(new Note(_int, new SoundFunction())); // play(line, , arrpeggioSustains.get(noteIndex));
 
-                    //noteIndex++;
-                    System.out.println("note " + notes.size());
-                }
+                //noteIndex++;
+                System.out.println("note " + notes.size());
+            }
             //}
 
             System.out.println("playing...");
 
             int noteIndexGlobal=0;
             //for(float i=0; i<2; i+=1){
-                p = new SoundFunction();
-                int noteIndex=0;
-                for(Integer _int : arrpeggioNotes){
-                    play(line,notes.get(noteIndexGlobal),arrpeggioSustains.get(noteIndex));
-                    noteIndex++;
-                    noteIndexGlobal++;
-                }
+            p = new SoundFunction();
+            int noteIndex=0;
+            for(Integer _int : arrpeggioNotes){
+                play(line,notes.get(noteIndexGlobal),arrpeggioSustains.get(noteIndex));
+                noteIndex++;
+                noteIndexGlobal++;
+            }
             //}
         }
 
         line.drain();
         line.close();
     }
-
-    private static void play(SourceDataLine line, Note note, int ms) {
-        ms = Math.min(ms, Note.MILLISECONDS);
-        int length = Note.SAMPLE_RATE * ms / 1000;
-        int count = line.write(note.getData(), 0, length);
-    }
 }
+
+
 
 class Note {
 
