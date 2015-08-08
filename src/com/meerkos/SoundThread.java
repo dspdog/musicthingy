@@ -1,23 +1,16 @@
 package com.meerkos;
 
 import com.meerkos.utils.SimplexNoise;
-import javafx.scene.shape.Circle;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.geom.NoninvertibleTransformException;
-import java.awt.geom.Point2D;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.Collections;
 
 public class SoundThread extends Panel {
 
@@ -80,7 +73,11 @@ public class SoundThread extends Panel {
         rg = (Graphics2D) render.getGraphics();
         rg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        //rg.setColor(Color.black);
+        rg.setColor(Color.black);
+        rg.fill(new Rectangle(0,0,screenwidth,screenheight));
+
+        rg.setColor(Color.white);
+        rg.setTransform(AffineTransform.getTranslateInstance(0,256));
         rg.draw(waveform);
         gr.drawImage(render, 0, 0, screenwidth, screenheight, this);
     }
@@ -105,7 +102,7 @@ public class SoundThread extends Panel {
             ArrayList<Integer> arrpeggioNotes = new ArrayList<Integer>();
             ArrayList<Integer> arrpeggioSustains = new ArrayList<Integer>();
 
-            int numNotes = 12;
+            int numNotes = 3;
             for(int i=0; i<numNotes; i++){
                 arrpeggioNotes.add(12);///*new Integer((int) (Math.random() * 12f))*/);
                 arrpeggioSustains.add(1000 /*new Integer((int) (400 + Math.random() * 800))*/);
@@ -139,7 +136,7 @@ public class SoundThread extends Panel {
             int noteIndex=0;
             for(Integer _int : arrpeggioNotes){
                 play(line,notes.get(noteIndexGlobal),arrpeggioSustains.get(noteIndex));
-                waveform = notes.get(noteIndexGlobal).myPeriodic.getShape();
+                waveform = notes.get(noteIndexGlobal).myPeriodic.getAmplitudesShape();
                 noteIndex++;
                 noteIndexGlobal++;
             }
@@ -240,15 +237,19 @@ class SoundFunction { //TODO MEMOIZE
         }
     }
 
-    public Shape getShape(){
-        Shape s = new Rectangle(20, 20, 100, 100);
-        return s;
+    public Shape getAmplitudesShape(){
+        Polygon p = new Polygon();
+
+        p.addPoint(0,100);
+        for(int i=0; i<NUM_BUCKETS; i++){
+            p.addPoint((int)(512f*i/NUM_BUCKETS),(int)(amplitudes[i]*10));
+        }
+        p.addPoint(512,100);
+
+        return p;
     }
 
     //TODO "OCTAVE NOISE" function <--reuse dream machine shader?
-    //TODO "VIEW THE WAVEFORM" and amplitudes
-
-    //TODO higher dimensional noise (no more buzzing)...
 
     public double myFunction(double time, double freq){
         //double period = 1f / freq;
