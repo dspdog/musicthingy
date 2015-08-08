@@ -1,6 +1,7 @@
 package com.meerkos;
 
 import com.meerkos.utils.SimplexNoise;
+import javafx.scene.shape.Circle;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -12,14 +13,22 @@ import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.geom.NoninvertibleTransformException;
+import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
 
 public class SoundThread extends Panel {
 
-    BufferedImage render;
-    Graphics2D rg;
+    public BufferedImage render;
+    public Graphics2D rg;
+
+    final UIThread game = new UIThread();;
+
+    public boolean quit = false;
+
+    public Shape waveform = new Rectangle();
 
     static final int screenwidth = 512;
     static final int screenheight = 512;
@@ -38,7 +47,7 @@ public class SoundThread extends Panel {
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
                 new JScrollPane(), is);
 
-        splitPane.setDividerLocation(256);
+        splitPane.setDividerLocation(32);
 
         f.add(splitPane);
 
@@ -47,7 +56,20 @@ public class SoundThread extends Panel {
         f.setSize(SoundThread.screenwidth, SoundThread.screenheight + 20); // add 20, seems enough for the Frame title,
         f.show();
 
+        is.start();
+
         System.setProperty("sun.java2d.opengl","True");
+        try {
+            is.sound();
+        } catch (LineUnavailableException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void start(){
+        render =  new BufferedImage(screenwidth, screenheight, BufferedImage.TYPE_INT_RGB); //createImage(screenwidth, screenheight);
+        rg = (Graphics2D)render.getGraphics();
+        game.start();
     }
 
     public void update(Graphics gr){
@@ -57,6 +79,10 @@ public class SoundThread extends Panel {
     public void paint(Graphics2D gr) {
         rg = (Graphics2D) render.getGraphics();
         rg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        //rg.setColor(Color.black);
+        rg.draw(waveform);
+        gr.drawImage(render, 0, 0, screenwidth, screenheight, this);
     }
 
     private static void play(SourceDataLine line, Note note, int ms) {
@@ -65,7 +91,7 @@ public class SoundThread extends Panel {
         int count = line.write(note.getData(), 0, length);
     }
 
-    public static void sound() throws LineUnavailableException {
+    public void sound() throws LineUnavailableException {
         final AudioFormat af =
                 new AudioFormat(Note.SAMPLE_RATE, 8, 1, true, true);
         SourceDataLine line = AudioSystem.getSourceDataLine(af);
@@ -113,6 +139,7 @@ public class SoundThread extends Panel {
             int noteIndex=0;
             for(Integer _int : arrpeggioNotes){
                 play(line,notes.get(noteIndexGlobal),arrpeggioSustains.get(noteIndex));
+                waveform = notes.get(noteIndexGlobal).myPeriodic.getShape();
                 noteIndex++;
                 noteIndexGlobal++;
             }
@@ -121,6 +148,22 @@ public class SoundThread extends Panel {
 
         line.drain();
         line.close();
+    }
+
+    public class UIThread extends Thread{
+        public void run(){
+            while(!quit){
+                try {
+                    repaint();
+                    sleep(20);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        public UIThread(){
+        }
     }
 }
 
@@ -165,6 +208,8 @@ class Note {
     }
 }
 
+
+
 class SoundFunction { //TODO MEMOIZE
     final int NUM_BUCKETS= 512;
     final double[] amplitudes = new double[NUM_BUCKETS];
@@ -193,6 +238,11 @@ class SoundFunction { //TODO MEMOIZE
             //amplitudes[(int)i] =  (Math.random()-0.5);
             //phases[(int)i] = (Math.random()-0.5)*2*Math.PI;
         }
+    }
+
+    public Shape getShape(){
+        Shape s = new Rectangle(20, 20, 100, 100);
+        return s;
     }
 
     //TODO "OCTAVE NOISE" function <--reuse dream machine shader?
