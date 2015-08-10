@@ -44,14 +44,11 @@ public class SoundThread extends Panel {
         splitPane.setDividerLocation(32);
 
         f.add(splitPane);
-
         f.pack();
-
         f.setSize(SoundThread.screenwidth, SoundThread.screenheight + 20); // add 20, seems enough for the Frame title,
         f.show();
 
         is.start();
-
         System.setProperty("sun.java2d.opengl","True");
         try {
             is.sound();
@@ -99,53 +96,16 @@ public class SoundThread extends Panel {
         line.open(af, Note.SAMPLE_RATE);
         line.start();
 
-        //RANDOM ARPEGGIOS
-        for(int attempt=0; attempt<100; attempt++){
-
-            ArrayList<Integer> arrpeggioNotes = new ArrayList<Integer>();
-            ArrayList<Integer> arrpeggioSustains = new ArrayList<Integer>();
-
-            int numNotes = 3;
-            for(int i=0; i<numNotes; i++){
-                arrpeggioNotes.add(12);///*new Integer((int) (Math.random() * 12f))*/);
-                arrpeggioSustains.add(1000 /*new Integer((int) (400 + Math.random() * 800))*/);
-            }
-
-            SoundFunction p = new SoundFunction();
-            System.out.println("generating sound...");
-            ArrayList<Note> notes = new ArrayList<Note>();
-            //for(float i=0; i<2; i+=1){ //arrpegg repeater
-
-            // int noteIndex=0;
-
-
-
-            for(Integer _int : arrpeggioNotes){
-
-
-                p = new SoundFunction();
-                notes.add(new Note(_int, new SoundFunction())); // play(line, , arrpeggioSustains.get(noteIndex));
-
-                //noteIndex++;
-                System.out.println("note " + notes.size());
-            }
-            //}
-
             System.out.println("playing...");
 
-            int noteIndexGlobal=0;
-            //for(float i=0; i<2; i+=1){
-            p = new SoundFunction();
-            int noteIndex=0;
-            for(Integer _int : arrpeggioNotes){
-                waveform = notes.get(noteIndexGlobal).myPeriodic.getAmplitudesShape();
-                phaseWaveform = notes.get(noteIndexGlobal).myPeriodic.getPhaseShape();
-                play(line,notes.get(noteIndexGlobal),arrpeggioSustains.get(noteIndex));
-                noteIndex++;
-                noteIndexGlobal++;
+            for(int i=0; i<1000; i++){
+                System.out.println("note");
+                Note n = new Note(i%12+1, new SoundFunction(), 500);
+                waveform = n.myPeriodic.getAmplitudesShape();
+                phaseWaveform = n.myPeriodic.getPhaseShape();
+                play(line,n,500);
+
             }
-            //}
-        }
 
         line.drain();
         line.close();
@@ -156,7 +116,7 @@ public class SoundThread extends Panel {
             while(!quit){
                 try {
                     repaint();
-                    sleep(5);
+                    sleep(20);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -178,8 +138,13 @@ class Note {
     public double[] dataD = new double[MILLISECONDS * SAMPLE_RATE / 1000];
     public SoundFunction myPeriodic;
 
-    Note(double n, SoundFunction p) {
+    public int myDur =0;
+    public int dataLen=0;
+
+    Note(double n, SoundFunction p, int dur) {
         myPeriodic=p;
+        myDur=dur;
+        dataLen= dur * SAMPLE_RATE / 1000;
         initAsFuncWNoteNumber(n);
     }
 
@@ -189,7 +154,8 @@ class Note {
 
     public void initAsFuncWFreq(double freq){
         double time = 0f;
-        for (int i = 0; i < data.length; i++) {
+        int len = Math.min(data.length, dataLen);
+        for (int i = 0; i < len; i++) {
             time+=1f/(SAMPLE_RATE);
             dataD[i] = myPeriodic.myFunction(time, freq);
         }
@@ -197,9 +163,9 @@ class Note {
 
     public byte[] getData(){
         double dataMax = 0;
-        double dataMin = 9999999;
-        for (int i = 0; i < data.length; i++){dataMax = Math.max(dataD[i],dataMax);dataMin = Math.min(dataD[i], dataMin);}
-        for (int i = 0; i < data.length; i++)data[i] = (byte)((dataD[i]-dataMin)/(dataMax-dataMin) * 127f);
+        double dataMin = 9999999;//
+        for (int i = 0; i < dataLen; i++){dataMax = Math.max(dataD[i],dataMax);dataMin = Math.min(dataD[i], dataMin);}
+        for (int i = 0; i < dataLen; i++)data[i] = (byte)((dataD[i]-dataMin)/(dataMax-dataMin) * 127f);
         return data;
     }
 
@@ -212,23 +178,23 @@ class Note {
 
 
 class SoundFunction { //TODO MEMOIZE
-    final int NUM_BUCKETS= 512;
+    final int NUM_BUCKETS= 256;
     final double[] amplitudes = new double[NUM_BUCKETS];
     final double[] phases = new double[NUM_BUCKETS];
 
     public SoundFunction(){
-        
-        double scale1 = 32 * (Math.random());
-        double scale2 = 32 * (Math.random());
 
-        double scale3 = 32 * (Math.random());
-        double scale4 = 32 * (Math.random());
+        double scale1 = 64 * (Math.random());
+        double scale2 = 64 * (Math.random());
 
-        double scale1d = 32 * (Math.random());
-        double scale2d = 32 * (Math.random());
+        //double scale3 = 32 * (Math.random());
+        //double scale4 = 32 * (Math.random());
 
-        double scale3d = 32 * (Math.random());
-        double scale4d = 32 * (Math.random());
+        double scale1d = 64 * (Math.random());
+        double scale2d = 64 * (Math.random());
+
+        //double scale3d = 32 * (Math.random());
+        //double scale4d = 32 * (Math.random());
 
         for(float i=0; i< NUM_BUCKETS; i++){
 
@@ -242,7 +208,17 @@ class SoundFunction { //TODO MEMOIZE
     }
 
     public double octaveNoise(double x, double y){
-        return SimplexNoise.noise(x,y)+SimplexNoise.noise(x/4f+16f,y/4f+32f)*2+SimplexNoise.noise(x/16f,y/16f+64f)*4+SimplexNoise.noise(x/32,y/32)*8;
+
+        int octaves = 3;
+        double res=0;
+        double div=1;
+
+        for(int i=0; i<octaves; i++){
+            res+=SimplexNoise.noise(x/div/div+(i*7%32),y/div/div+(i*7%32))*div;
+            div*=2;
+        }
+
+        return res;
     }
 
     public Shape getAmplitudesShape(){
@@ -270,9 +246,6 @@ class SoundFunction { //TODO MEMOIZE
     }
 
     public double myFunction(double time, double freq){
-        //double period = 1f / freq;
-        //double angleForMainFreq = 2.0 * Math.PI * time / period;
-
         double res = 0;
 
         for(int i=1; i<NUM_BUCKETS; i++){
@@ -281,7 +254,6 @@ class SoundFunction { //TODO MEMOIZE
             res+=amplitudes[i]*Math.sin(freq*_angleForThisFreq);
         }
 
-        //CREATE RANDOM SET OF RATIONALS...
-        return res; //Math.sin(angle*2) + 2*Math.sin(angle) + 3*Math.sin(angle/2)+ 3*Math.sin(angle/3)+ 9*Math.sin(angle/5) + 1*Math.sin(angle/4)+ 8*Math.sin(angle/8)+ Math.sin(angle/16);
+        return res;
     }
 }
