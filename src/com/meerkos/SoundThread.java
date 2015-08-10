@@ -100,10 +100,10 @@ public class SoundThread extends Panel {
 
             for(int i=0; i<1000; i++){
                 System.out.println("note");
-                Note n = new Note(i%12+1, new SoundFunction(), 500);
+                Note n = new Note(i%12+1, new SoundFunction(), 200);
                 waveform = n.myPeriodic.getAmplitudesShape();
                 phaseWaveform = n.myPeriodic.getPhaseShape();
-                play(line,n,500);
+                play(line,n,200);
 
             }
 
@@ -164,8 +164,18 @@ class Note {
     public byte[] getData(){
         double dataMax = 0;
         double dataMin = 9999999;//
+
+        int fadeSamples = 128;
+
         for (int i = 0; i < dataLen; i++){dataMax = Math.max(dataD[i],dataMax);dataMin = Math.min(dataD[i], dataMin);}
-        for (int i = 0; i < dataLen; i++)data[i] = (byte)((dataD[i]-dataMin)/(dataMax-dataMin) * 127f);
+        for (int i = 0; i < dataLen; i++){
+            data[i] = (byte)((dataD[i]-dataMin)/(dataMax-dataMin) * 127f);
+            if(i<fadeSamples){
+                data[i]=(byte)(data[i]*(1f*i/fadeSamples));
+            }else if(i>dataLen-fadeSamples){
+                data[i]=(byte)(data[i]*(1f*(dataLen-i)/fadeSamples));
+            }
+        }
         return data;
     }
 
@@ -187,22 +197,16 @@ class SoundFunction { //TODO MEMOIZE
         double scale1 = 64 * (Math.random());
         double scale2 = 64 * (Math.random());
 
-        //double scale3 = 32 * (Math.random());
-        //double scale4 = 32 * (Math.random());
 
         double scale1d = 64 * (Math.random());
         double scale2d = 64 * (Math.random());
 
-        //double scale3d = 32 * (Math.random());
-        //double scale4d = 32 * (Math.random());
 
         for(float i=0; i< NUM_BUCKETS; i++){
 
             float scale = i/NUM_BUCKETS;
 
             amplitudes[(int)i] = octaveNoise(scale1 * scale + scale1d, scale2 * scale + scale2d);
-           // phases[(int)i] = octaveNoise(scale3 * scale + scale3d, scale4 * scale + scale4d);// * 2 * Math.PI;//Math.random()*2*Math.PI;
-            //amplitudes[(int)i] =  (Math.random()-0.5);
             phases[(int)i] = (Math.random()-0.5)*2*Math.PI;
         }
     }
