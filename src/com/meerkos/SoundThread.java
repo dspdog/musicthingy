@@ -10,7 +10,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
+import java.util.Random;
 
 public class SoundThread extends Panel {
 
@@ -21,8 +21,10 @@ public class SoundThread extends Panel {
 
     public boolean quit = false;
 
-    public Shape waveform = new Rectangle();
+    public Shape ampWaveform = new Rectangle();
     public Shape phaseWaveform = new Rectangle();
+    public Shape timeWaveform = new Rectangle();
+
 
     static final int screenwidth = 512;
     static final int screenheight = 512;
@@ -75,10 +77,16 @@ public class SoundThread extends Panel {
         rg.fill(new Rectangle(0,0,screenwidth,screenheight));
 
         rg.setColor(Color.white);
-        rg.setTransform(AffineTransform.getTranslateInstance(0,128));
-        rg.draw(waveform);
+        rg.setTransform(AffineTransform.getTranslateInstance(0,0));
+        rg.fill(ampWaveform);
+
+        rg.setColor(Color.red);
+        rg.setTransform(AffineTransform.getTranslateInstance(0,128*2));
+        rg.fill(timeWaveform);
+
+        rg.setColor(Color.blue);
         rg.setTransform(AffineTransform.getTranslateInstance(0,128*3));
-        rg.draw(phaseWaveform);
+        rg.fill(phaseWaveform);
         gr.drawImage(render, 0, 0, screenwidth, screenheight, this);
     }
 
@@ -100,9 +108,10 @@ public class SoundThread extends Panel {
 
             for(int i=0; i<1000; i++){
                 System.out.println("note");
-                Note n = new Note(i%12+1, new SoundFunction(), 200);
-                waveform = n.myPeriodic.getAmplitudesShape();
+                Note n = new Note(1, new SoundFunction(), 200);
+                ampWaveform = n.myPeriodic.getAmplitudesShape();
                 phaseWaveform = n.myPeriodic.getPhaseShape();
+                timeWaveform = n.myPeriodic.getTimeShape();
                 play(line,n,200);
 
             }
@@ -116,7 +125,7 @@ public class SoundThread extends Panel {
             while(!quit){
                 try {
                     repaint();
-                    sleep(20);
+                    sleep(5);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -194,26 +203,28 @@ class SoundFunction { //TODO MEMOIZE
 
     public SoundFunction(){
 
-        double scale1 = 64 * (Math.random());
-        double scale2 = 64 * (Math.random());
+        Random rnd = new Random();
+
+        double scaleX = 100f; //((System.currentTimeMillis()%10000)/100f);//64 * (Math.random());
+        double scaleY = 5;//64 * (Math.random());
 
 
-        double scale1d = 64 * (Math.random());
-        double scale2d = 64 * (Math.random());
+        double offsetX = ((System.currentTimeMillis()%100000)/500f); //64 * (Math.random());
+        double offsetY = ((System.currentTimeMillis()%100000)/500f); //64 * (Math.random());
 
 
         for(float i=0; i< NUM_BUCKETS; i++){
 
-            float scale = i/NUM_BUCKETS;
+            float percent = i/NUM_BUCKETS;
 
-            amplitudes[(int)i] = octaveNoise(scale1 * scale + scale1d, scale2 * scale + scale2d);
-            phases[(int)i] = (Math.random()-0.5)*2*Math.PI;
+            amplitudes[(int)i] = octaveNoise(scaleX * percent + offsetX, scaleY * percent + offsetY);
+            phases[(int)i] = octaveNoise(scaleX*2 * percent + offsetX*2, scaleY * percent*2 + offsetY*2);//(Math.random()-0.5)*2*Math.PI;
         }
     }
 
     public double octaveNoise(double x, double y){
 
-        int octaves = 3;
+        int octaves = 4;
         double res=0;
         double div=1;
 
@@ -249,11 +260,24 @@ class SoundFunction { //TODO MEMOIZE
         return p;
     }
 
+    public Shape getTimeShape(){
+        Polygon p = new Polygon();
+
+        p.addPoint(0,100);
+        float totalSamples = 200;
+        for(int i=0; i<totalSamples; i++){
+            p.addPoint((int)(512f*i/totalSamples),(int)(0.1f*myFunction(512f*i/totalSamples, 2)));
+        }
+        p.addPoint(512,100);
+
+        return p;
+    }
+
     public double myFunction(double time, double freq){
         double res = 0;
 
         for(int i=1; i<NUM_BUCKETS; i++){
-            double _period = 1d * NUM_BUCKETS / i ;
+            double _period = 10000f * NUM_BUCKETS / i / Note.SAMPLE_RATE;
             double _angleForThisFreq = 2.0 * Math.PI * time / _period + phases[i];
             res+=amplitudes[i]*Math.sin(freq*_angleForThisFreq);
         }
